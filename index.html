@@ -28,123 +28,23 @@
         box-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         background-image: linear-gradient(to bottom, #f0d080, #e0c070);
         border: 2px outset #f0d080;
-
       }
     </style>
-    <script>
-      var board = (function () {
-        var c, ctx;
-
-        return {
-          init : function (canvasId) {
-            var minDim;
-
-            c = document.getElementById(canvasId);
-            minDim = c.width < c.height ? c.width : c.height;
-            c.width = minDim;
-            c.height = minDim;
-            ctx = c.getContext("2d");
-            ctx.clearRect(0,0,c.width,c.height);
-          },
-
-          render : function (size) {
-            var stepSize = c.width / (size + 1);
-            var x,y;
-            var arcPoints;
-            var i,j;
-            
-            ctx.clearRect(0,0,c.width,c.height);
-
-            if (size == 19) {
-              arcPoints = [4*stepSize, 10*stepSize, 16*stepSize];
-            } else if (size == 9) {
-              arcPoints = [3*stepSize, 7*stepSize];
-            }
-            ctx.fillStyle = "#303030";
-            ctx.beginPath();
-            ctx.moveTo(stepSize, stepSize*size);
-            ctx.lineTo(stepSize, stepSize);
-            ctx.lineTo(stepSize*size, stepSize);
-            for (x = 2; x <= size; x++) {
-              for (y = 2; y <= size; y++) {
-                ctx.moveTo((x-1)*stepSize, y*stepSize);
-                ctx.lineTo(x*stepSize, y*stepSize);
-                ctx.lineTo(x*stepSize, (y-1)*stepSize);
-              }
-            }
-            ctx.stroke();
-
-            for (i = 0; i < arcPoints.length; i++) {
-              ctx.beginPath();
-              for (j = 0; j < arcPoints.length; j++) {
-                ctx.arc(arcPoints[i], arcPoints[j], stepSize / 7, 0, Math.PI*2); 
-              }
-              ctx.fill();
-            }
-          },
-
-          getUiControls : function (game) {
-            return {
-            };
-          }
-        };
-      })();
-
-      var rules = (function () {
-        return {
-        };
-      })();
-
-      var game = (function () {
-        var size;
-
-        var players = [];
-
-        return {
-          init : function (board, rules) {
-            this.size = size;
-            console.log(this.size);
-          },
-
-          addPlayer : function (name, controls) {
-            players.push({
-              name : name,
-              controls: controls
-            });
-          },
-          
-          start : function () {
-          },
-
-          reset : function () {
-          }
-        };
-      })();
-
-      var uiControls = (function () {
-      })();
-
-      var aiControls = (function () {
-      })();
-    </script>
+    <script src="javascript/go.js"></script>
   </head>
   <body>
     <header>
       <h1>Go &mdash; 圍棋</h1>
     </header>
     <main>
-      <canvas width="500" height="500" id="go-board"></canvas>
+      <canvas width="400" height="400" id="go-board"></canvas>
     </main>
     <footer>
-      Board: <a href="" onclick="board.render(9); return false;">9&times;9</a> | <a href="" onclick="board.render(19); return false;">19&times;19</a> 
+      Board: <a href="" onclick="return go.newBoard('go-board', 9);">9&times;9</a> |
+             <a href="" onclick="return go.newBoard('go-board', 19);">19&times;19</a> 
     </footer>
     <script>
-      board.init('go-board');
-      board.render(9);
-      game.init(board, rules);
-      game.addPlayer('Jimmy', uiControls);
-      game.addPlayer('Computer', aiControls);
-      game.start();
+      go.newBoard('go-board', 19);
     </script>
   </body>
 </html>
