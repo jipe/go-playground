@@ -14,16 +14,10 @@ var go = (function () {
     var stepSize = (canvas.width < canvas.height ? canvas.width : canvas.height) / (size + 1);
 
     var x,y;
-    var arcPoints;
+    var starPoints;
     var i,j;
     
     ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    if (size == 19) {
-      arcPoints = [4*stepSize, 10*stepSize, 16*stepSize];
-    } else if (size == 9) {
-      arcPoints = [3*stepSize, 7*stepSize];
-    }
 
     ctx.fillStyle = "#303030";
     ctx.beginPath();
@@ -40,11 +34,17 @@ var go = (function () {
     }
     ctx.stroke();
 
-    for (i = 0; i < arcPoints.length; i++) {
+    if (size == 9) {
+      starPoints = [[3,3], [7,3], [5,5], [3,7], [7,7]];
+    } else if (size == 13) {
+      starPoints = [[4,4], [10,4], [7,7], [4,10], [10,10]];
+    } else if (size == 19) {
+      starPoints = [[4,4], [10,4], [16,4], [4,10], [10,10], [16,10], [4,16], [10,16], [16,16]];
+    }
+
+    for (i = 0; i < starPoints.length; i++) {
       ctx.beginPath();
-      for (j = 0; j < arcPoints.length; j++) {
-        ctx.arc(arcPoints[i], arcPoints[j], stepSize / 7, 0, Math.PI*2); 
-      }
+      ctx.arc(starPoints[i][0]*stepSize, starPoints[i][1]*stepSize, 4, 0, Math.PI*2); 
       ctx.fill();
     }
   };
