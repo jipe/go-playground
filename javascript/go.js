@@ -1,17 +1,23 @@
 var go = (function () {
-  function Board (canvasId, size) {
-    this.size   = size;
+  function Board (canvasId, game) {
+    var max;
+
+    this.game = game;
     this.canvas = document.getElementById(canvasId);
-    this.ctx    = this.canvas.getContext("2d");
+    maxDim = this.canvas.width > this.canvas.height ? this.canvas.width : this.canvas.height;
+    this.canvas.width = maxDim;
+    this.canvas.height = maxDim;
+    this.ctx = this.canvas.getContext("2d");
 
     this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
   };
 
   Board.prototype.render = function () {
-    var ctx      = this.ctx;
-    var size     = this.size;
-    var canvas   = this.canvas;
-    var stepSize = (canvas.width < canvas.height ? canvas.width : canvas.height) / (size + 1);
+    var size      = this.game.size;
+    var ctx       = this.ctx;
+    var canvas    = this.canvas;
+    var stepSize  = canvas.width / (size + 1);
+    var positions = this.game.positions;
 
     var x,y;
     var starPoints;
@@ -44,21 +50,116 @@ var go = (function () {
 
     for (i = 0; i < starPoints.length; i++) {
       ctx.beginPath();
-      ctx.arc(starPoints[i][0]*stepSize, starPoints[i][1]*stepSize, 4, 0, Math.PI*2); 
+      ctx.arc(starPoints[i][0]*stepSize, starPoints[i][1]*stepSize, Math.max(3, stepSize / 22 * 2), 0, Math.PI*2); 
       ctx.fill();
+    }
+    
+    for (i = 0; i < size; i++) {
+      for (j = 0; j < size; j++) {
+        if (positions[i][j] != -1) {
+          ctx.fillStyle = positions[i][j] == 0 ? "rgb(0,0,0)" : "rgb(255,255,255)";
+          ctx.beginPath();
+          ctx.arc((i+1)*stepSize, (j+1)*stepSize, stepSize / 2 - 1, 0, Math.PI*2);
+          ctx.fill();
+        }
+      }
     }
   };
 
+  Board.prototype.attachUiControls = function (game) {
+    var board    = this;
+    var canvas   = this.canvas;
+    var stepSize = canvas.width / (game.size + 1);
+    var ctx      = this.ctx;
+    var position;
+
+    this.canvas.onmousemove = function (event) {
+      position = {
+        x: Math.round((event.pageX - canvas.offsetLeft) / stepSize),
+        y: Math.round((event.pageY - canvas.offsetTop) / stepSize)
+      };
+
+      position.x = Math.min(19, Math.max(1, position.x));
+      position.y = Math.min(19, Math.max(1, position.y));
+
+      board.render();    
+      if (game.currentPlayer.id != -1 && game.rules.evaluate(game, position.x, position.y).length == 0) {
+        ctx.fillStyle = game.currentPlayer.id == 0 ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.6)";
+        ctx.beginPath();
+        ctx.arc(position.x*stepSize, position.y*stepSize, stepSize / 2 - 1, 0, Math.PI*2);
+        ctx.fill();
+      }
+    };
+
+    this.canvas.onmouseout = function () {
+      board.render();
+    };
+
+    this.canvas.onclick = function (event) {
+      if (game.placeStone(position.x, position.y)) {
+        board.render();    
+        game.currentPlayer.id++;
+        if (game.currentPlayer.id > 1) {
+          game.currentPlayer.id = 0;
+        }
+      }
+    };
+  };
+
+  Board.prototype.detachUiControls = function () {
+    this.canvas.onmousemove = undefined;
+  };
+
+  function Game(size, rules) {
+    var i,j;
+
+    this.size      = size;
+    this.rules     = rules;
+    this.positions = [];
+    this.currentPlayer = {
+      id: 0
+    };
+
+    for (i = 0; i < size; i++) {
+      this.positions.push([]);
+      for (j = 0; j < size; j++) {
+        this.positions[i].push(-1);
+      }
+    }
+  }
+
+  Game.prototype.placeStone = function (x,y) {
+    if (this.positions[x-1][y-1] == -1) {
+      this.positions[x-1][y-1] = this.currentPlayer.id;
+      return true; 
+    }
+    return false;
+  }
+
+  function Rules() {
+  }
+
+  Rules.prototype.evaluate = function (game, x, y) {
+    var conflictingRules = [];
+
+    if (game.positions[x-1][y-1] != -1) {
+      conflictingRules.push('OCCUPIED');
+    }
+    
+    return conflictingRules;
+  };
+
   return {
-    newBoard : function (canvasId, size) {
-      this.board = new Board(canvasId, size);
-      this.board.render();
-      return false;
+    createRules : function () {
+      return new Rules();
     },
 
-    newGame : function (canvasId, size) {
-      var board = new go.Board(canvasId, size);
-      return new go.Game(board);
+    createBoard : function (canvasId, game) {
+      return new Board(canvasId, game);
+    },
+
+    createGame : function (size, rules) {
+      return new Game(size, rules);
     }
   }
 })();

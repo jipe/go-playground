@@ -27,7 +27,12 @@
       #go-board {
         box-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         background-image: linear-gradient(to bottom, #f0d080, #e0c070);
-        border: 2px outset #f0d080;
+        margin: 0px;
+        border-radius: 5px
+      }
+
+      a {
+        color: #00c;
       }
     </style>
     <script src="javascript/go.js"></script>
@@ -37,15 +42,21 @@
       <h1>Go &mdash; 圍棋</h1>
     </header>
     <main>
-      <canvas width="400" height="400" id="go-board"></canvas>
+      <canvas width="800" id="go-board"></canvas>
     </main>
     <footer>
-      Board: <a href="" onclick="return go.newBoard('go-board', 9);">9&times;9</a> |
-             <a href="" onclick="return go.newBoard('go-board', 13);">13&times;13</a> |
-             <a href="" onclick="return go.newBoard('go-board', 19);">19&times;19</a> 
+      Board: 
+      <button disabled="disabled" onclick="go.newGame('go-board', 9);">9&times;9</button>
+      <button disabled="disabled" onclick="go.newGame('go-board', 13);">13&times;13</button>
+      <button disabled="disabled" onclick="go.newGame('go-board', 19);">19&times;19</button>
+      <button>Start game</button>
     </footer>
     <script>
-      go.newBoard('go-board', 19);
+      var rules = go.createRules();
+      var game  = go.createGame(19, rules);
+      var board = go.createBoard('go-board', game);
+      board.attachUiControls(game);
+      board.render();
     </script>
   </body>
 </html>
