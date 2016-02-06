@@ -30,6 +30,10 @@ var go = (function () {
     this.positions[x-1][y-1] = '+';
   };
 
+  Board.prototype.isFree = function (x, y) {
+    return this.positions[x-1][y-1] == '+';
+  };
+
   Board.prototype.isOccupied = function (x, y) {
     return this.positions[x-1][y-1] != '+';
   };
@@ -71,20 +75,16 @@ var go = (function () {
 
   BoardWidget.prototype.render = (function () {
     function renderGrid(ctx, size, stepSize) {
-      var x,y;
+      var i;
 
       ctx.fillStyle = "#303030";
       ctx.beginPath();
-      ctx.moveTo(stepSize, stepSize*size);
-      ctx.lineTo(stepSize, stepSize);
-      ctx.lineTo(stepSize*size, stepSize);
 
-      for (x = 2; x <= size; x++) {
-        for (y = 2; y <= size; y++) {
-          ctx.moveTo((x-1)*stepSize, y*stepSize);
-          ctx.lineTo(x*stepSize, y*stepSize);
-          ctx.lineTo(x*stepSize, (y-1)*stepSize);
-        }
+      for (i = 1; i <= size; i++) {
+        ctx.moveTo(i*stepSize, stepSize);
+        ctx.lineTo(i*stepSize, stepSize*size);
+        ctx.moveTo(stepSize, i*stepSize);
+        ctx.lineTo(stepSize*size, i*stepSize);
       }
       ctx.stroke();
     }
@@ -101,7 +101,18 @@ var go = (function () {
 
     function renderPlacedStones(ctx, board, stepSize, radius) {
       var positions = board.positions;
+      var origCtx = {
+        shadowColor   : ctx.shadowColor,
+        shadowBlur    : ctx.shadowBlur,
+        shadowOffsetX : ctx.shadowOffsetX,
+        shadowOffsetY : ctx.shadowOffsetY,
+      };
       var i,j;
+
+      ctx.shadowColor = 'rgba(0,0,0,0.4)';
+      ctx.shadowBlur = 3;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
 
       for (i = 0; i < board.size; i++) {
         for (j = 0; j < board.size; j++) {
@@ -114,21 +125,17 @@ var go = (function () {
               ctx.fillStyle = "#000";
               break;
             };
-            ctx.shadowColor = 'rgba(0,0,0,0.4)';
-            ctx.shadowBlur = 3;
-            ctx.shadowOffsetX = 2;
-            ctx.shadowOffsetY = 2;
             ctx.beginPath();
             ctx.arc((i+1)*stepSize, (j+1)*stepSize, radius, 0, Math.PI*2);
             ctx.fill();
-
-            ctx.shadowColor = undefined;
-            ctx.shadowBlur = 0;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
           }
         }
       }
+
+      ctx.shadowColor   = origCtx.shadowColor;
+      ctx.shadowBlur    = origCtx.shadowBlur;
+      ctx.shadowOffsetX = origCtx.shadowOffsetX;
+      ctx.shadowOffsetY = origCtx.shadowOffsetY;
     }
 
     return function () {
@@ -137,8 +144,6 @@ var go = (function () {
       var canvas    = this.canvas;
       var stepSize  = canvas.width / (size + 1);
       
-      console.log("Render widget");
-
       ctx.clearRect(0,0,canvas.width,canvas.height);
       renderGrid(ctx, size, stepSize);
       renderStarPoints(ctx, this.board.starPoints, stepSize, Math.max(3, stepSize / 22 * 2));
@@ -168,14 +173,17 @@ var go = (function () {
       if (previousPosition == undefined || position.x != previousPosition.x || position.y != previousPosition.y) {
         widget.render();    
         if (['PLACE_WHITE_STONE', 'PLACE_BLACK_STONE'].includes(game.state)) {
-          if ('PLACE_WHITE_STONE' == game.state) {
-            ctx.fillStyle = "rgba(255,255,255,0.5)";
-          } else if ('PLACE_BLACK_STONE' == game.state) {
-            ctx.fillStyle = "rgba(0,0,0,0.5)";
+          if (game.rules.isLegalMove(board, position.x, position.y)) {
+            console.log("Liberty count for (" + position.x + "," + position.y + ") is " + game.getLibertyCount(position.x, position.y));
+            if ('PLACE_WHITE_STONE' == game.state) {
+              ctx.fillStyle = "rgba(255,255,255,0.5)";
+            } else if ('PLACE_BLACK_STONE' == game.state) {
+              ctx.fillStyle = "rgba(0,0,0,0.5)";
+            }
+            ctx.beginPath();
+            ctx.arc(position.x*stepSize, position.y*stepSize, stepSize / 2 - 1, 0, Math.PI*2);
+            ctx.fill();
           }
-          ctx.beginPath();
-          ctx.arc(position.x*stepSize, position.y*stepSize, stepSize / 2 - 1, 0, Math.PI*2);
-          ctx.fill();
         }
         previousPosition = position;
       }
@@ -215,12 +223,12 @@ var go = (function () {
     if (['PLACE_BLACK_STONE', 'PLACE_WHITE_STONE'].includes(this.state) && this.rules.evaluateMove(this.board, x, y).length == 0) {
       if ('PLACE_BLACK_STONE' == this.state) {
         this.board.placeStone('X', x, y);
-        this.players[0].passes = 0;
+        this.players[0].passed = false;
         this.players[0].stones--;
         color = 'BLACK';
       } else if ('PLACE_WHITE_STONE' == this.state) {
         this.board.placeStone('O', x, y);
-        this.players[1].passes = 0;
+        this.players[1].passed = false;
         this.players[1].stones--;
         color = 'WHITE';
       }
@@ -229,12 +237,40 @@ var go = (function () {
     }
   }
 
+  Game.prototype.getLibertyCount = (function () {
+    function getSingleLibertyCount(x, y) {
+      var result = 0;
+      if (x > 1 && this.board.isFree(x-1,y)) result++;
+      if (y > 1 && this.board.isFree(x,y-1)) result++;
+      if (x < this.board.size && this.board.isFree(x+1,y)) result++;
+      if (y < this.board.size && this.board.isFree(x,y+1)) result++;
+      return result;
+    };
+
+    function getConnectedStones(x, y) {
+      var result = [];
+      var player = this.board.positions
+
+      return result;
+    }
+
+    return function (x, y) {
+      var connectedStones = this.getConnectedStones(x, y);
+      var i;
+      var result = 0;
+
+      for (i = 0; i < connectedStones.length; i++) {
+        result += getSingleLibertyCount(connectedStones[i].x, connectedStones[i].y);
+      }
+    };
+  })();
+
   Game.prototype.pass = function () {
     if ('PLACE_BLACK_STONE' == this.state) {
-      this.players[0].passes++;
+      this.players[0].passed = true;
       this.reportEvent('onTurnPassed', 'BLACK');
     } else if ('PLACE_WHITE_STONE' == this.state) {
-      this.players[1].passes++;
+      this.players[1].passed = true;
       this.reportEvent('onTurnPassed', 'WHITE');
     }
     this.rules.progress(this);
@@ -245,7 +281,7 @@ var go = (function () {
       this.players.push({
         name : name,
         stones : Math.floor(this.board.size*this.board.size / 2) + (this.players.length == 0 ? 1 : 0),
-        passes : 0
+        passed : false
       });
       console.log("Added player with " + this.players[this.players.length-1].stones + " stones");
       this.reportEvent('onPlayerAdded', this.players.length == 1 ? 'BLACK' : 'WHITE', name);
@@ -313,8 +349,15 @@ var go = (function () {
     return conflictingRules;
   };
 
+  Rules.prototype.isLegalMove = function (board, x, y) {
+    console.log(this.evaluateMove(board, x, y));
+    return this.evaluateMove(board, x, y).length == 0;
+  };
+
   Rules.prototype.progress = function (game) {
-    if (game.players[0].passes == 3 && game.players[1].passes == 3) {
+    var x,y;
+
+    if (game.players[0].passed && game.players[0].passed && game.state == 'PLACE_WHITE_STONE') {
       game.setState('ENDED');
       return;
     }
@@ -322,7 +365,7 @@ var go = (function () {
     if (game.players[0].stones == 0 && game.players[1].stones == 0) {
       game.setState('ENDED');
     }
-
+    
     switch (game.state) {
     case 'PLACE_BLACK_STONE':
       game.setState('PLACE_WHITE_STONE');
